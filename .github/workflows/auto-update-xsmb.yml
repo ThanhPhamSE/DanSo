@@ -1,0 +1,30 @@
+name: Auto Update XSMB Data
+
+on:
+  schedule:
+    # Runs at 11:45 UTC daily (18:45 GMT+7 in Vietnam, right after XSMB draw at 18:30)
+    - cron: '45 11 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch and Update Today XSMB Data
+        run: |
+          node scripts/update_xsmb.js
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add xsmb.json public/xsmb.json src/data/xsmb.json xsmb_data.csv
+          git diff-index --quiet HEAD || (git commit -m "auto: update XSMB data for today [skip ci]" && git push)
