@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Sliders, Calendar, Sparkles, Trash2, FileText, CheckCircle2, FileSpreadsheet, Upload, Download, AlertCircle, FileUp } from 'lucide-react';
+import { Sliders, Calendar, Sparkles, Trash2, FileText, CheckCircle2, FileSpreadsheet, Upload, Download, AlertCircle, FileUp, Database } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { parseBulkSetsText } from '../utils/lotteryEngine';
+import { parseBulkSetsText, DEFAULT_INPUT_TEXT } from '../utils/lotteryEngine';
 
 export default function SetInputPanel({
   rawInputText,
@@ -201,7 +201,7 @@ export default function SetInputPanel({
           <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center">
             <button
               onClick={() => setMode('de')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 mode === 'de'
                   ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                   : 'text-slate-400 hover:text-slate-200'
@@ -210,8 +210,18 @@ export default function SetInputPanel({
               🎯 Đề (Giải ĐB)
             </button>
             <button
+              onClick={() => setMode('g1')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                mode === 'g1'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              🥇 Giải Nhất (G1)
+            </button>
+            <button
               onClick={() => setMode('lo')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 mode === 'lo'
                   ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
                   : 'text-slate-400 hover:text-slate-200'
@@ -348,7 +358,17 @@ export default function SetInputPanel({
 
       {/* Action Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => {
+              setRawInputText(DEFAULT_INPUT_TEXT);
+              setImportStatus({ type: 'success', message: 'Đã nạp thành công 9 dàn số chuẩn từ Firebase!' });
+            }}
+            className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <Database className="w-3.5 h-3.5 text-amber-400" />
+            Nạp 9 Dàn Từ Firebase
+          </button>
           <button
             onClick={handleLoadSampleText}
             className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold flex items-center gap-1.5 transition-all"
