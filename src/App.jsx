@@ -47,15 +47,14 @@ export default function App() {
     init();
   }, []);
 
-  // Auto-refresh: lightweight check every 60 seconds directly against Firebase Realtime DB
+  // Auto-refresh: lightweight check directly against Firebase Realtime DB
   useEffect(() => {
     if (isLoading || historyData.length === 0) return;
 
-    const currentLatest = historyData[0]?.d;
-
     const runAutoCheck = async () => {
       try {
-        const res = await checkAndSyncNewDraws(currentLatest);
+        const currentLatest = historyData[0]?.d;
+        const res = await checkAndSyncNewDraws(currentLatest, historyData);
         if (res.hasNew && res.records && res.records.length > 0) {
           setHistoryData(res.records);
           setSyncMeta(res.meta);
@@ -70,10 +69,21 @@ export default function App() {
       }
     };
 
-    // Run first check 2 seconds after load
-    const initialTimer = setTimeout(runAutoCheck, 2000);
-    // Poll every 60 seconds for 24/7 realtime updates
-    const interval = setInterval(runAutoCheck, 60 * 1000);
+    // Run first check 1.5 seconds after load
+    const initialTimer = setTimeout(runAutoCheck, 1500);
+
+    // Dynamic poll interval: during draw time (18:10 - 19:00 VN time), poll every 20s; otherwise every 60s
+    const getPollInterval = () => {
+      const nowVN = new Date(Date.now() + 7 * 60 * 60 * 1000);
+      const hour = nowVN.getUTCHours();
+      const min = nowVN.getUTCMinutes();
+      if ((hour === 18 && min >= 10) || (hour === 19 && min <= 5)) {
+        return 20 * 1000;
+      }
+      return 60 * 1000;
+    };
+
+    const interval = setInterval(runAutoCheck, getPollInterval());
 
     return () => {
       clearTimeout(initialTimer);

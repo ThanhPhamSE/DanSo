@@ -290,7 +290,7 @@ export async function loadLotteryData(forceOnline = false) {
  * If yes, automatically fetch and merge the new records incrementally.
  * Returns { hasNew: true, records, meta, newDate } or { hasNew: false }
  */
-export async function checkAndSyncNewDraws(currentLatestDate) {
+export async function checkAndSyncNewDraws(currentLatestDate, inMemoryRecords = null) {
   try {
     const baseUrl = getDatabaseUrl();
     // Tiny lightweight query: fetch only the 1 latest key from Firebase
@@ -306,9 +306,11 @@ export async function checkAndSyncNewDraws(currentLatestDate) {
 
     // If Firebase has a newer date than current in-memory / cache
     if (!currentLatestDate || firebaseLatestDate > currentLatestDate) {
-      console.log(`[DataService] 🔥 Found newer draw on Firebase: ${firebaseLatestDate} > ${currentLatestDate}. Syncing...`);
+      console.log(`[DataService] 🔥 Found newer draw on Firebase: ${firebaseLatestDate} > ${currentLatestDate}. Auto-syncing...`);
       const { data: cachedData } = readCache();
-      const baseRecords = (cachedData && cachedData.length > 0) ? cachedData : [];
+      const baseRecords = (inMemoryRecords && inMemoryRecords.length > 0)
+        ? inMemoryRecords
+        : (cachedData && cachedData.length > 0) ? cachedData : [];
       
       const merged = await incrementalUpdate(baseRecords, currentLatestDate || '2010-01-01');
       if (merged && merged.length > 0) {
