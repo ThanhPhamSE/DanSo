@@ -6,6 +6,7 @@ import FrequencyView from './components/FrequencyView';
 import GanView from './components/GanView';
 import CycleView from './components/CycleView';
 import DanSoDedicatedView from './components/DanSoDedicatedView';
+import Khung2NgayView from './components/Khung2NgayView';
 import BacktestView from './components/BacktestView';
 import HistoryResultView from './components/HistoryResultView';
 import SettingsSyncView from './components/SettingsSyncView';
@@ -174,6 +175,15 @@ export default function App() {
                   historyData={historyData}
                 />
               ) : null
+            )}
+
+            {/* ===================== MÀN DÀN 92-93 SỐ KHUNG MAX 2 NGÀY ===================== */}
+            {activeTab === 'danso_khung2ngay' && (
+              <Khung2NgayView
+                historyData={historyData}
+                currentMode={mode}
+                setMode={setMode}
+              />
             )}
 
             {/* ===================== DASHBOARD ===================== */}
