@@ -1,16 +1,42 @@
 import React, { useState } from 'react';
-import { Settings, RefreshCw, Database, ShieldCheck, CheckCircle2, AlertTriangle, ExternalLink, Save } from 'lucide-react';
-import { getDatabaseUrl, setDatabaseUrl } from '../services/firebaseClient';
+import { Settings, RefreshCw, Database, ShieldCheck, CheckCircle2, AlertTriangle, ExternalLink, Save, Trash2, Info, Activity, Clock } from 'lucide-react';
+import { getDatabaseUrl, setDatabaseUrl, checkFirebaseConnectivity } from '../services/firebaseClient';
+import { clearDataCache } from '../services/dataService';
 
-export default function SettingsSyncView({ meta, onRefresh, isRefreshing }) {
+export default function SettingsSyncView({ meta, onRefresh, onHardReset, isRefreshing, latestDate }) {
   const [dbUrl, setDbUrl] = useState(getDatabaseUrl());
   const [saveStatus, setSaveStatus] = useState('');
+  const [connectStatus, setConnectStatus] = useState(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   const handleSaveUrl = (e) => {
     e.preventDefault();
     setDatabaseUrl(dbUrl);
     setSaveStatus('Đã lưu cấu hình Firebase Database URL thành công!');
     setTimeout(() => setSaveStatus(''), 3000);
+  };
+
+  const handleTestConnect = async () => {
+    setIsTesting(true);
+    setConnectStatus({ type: 'info', message: 'Đang kiểm tra kết nối trực tiếp đến Firebase...' });
+    try {
+      const result = await checkFirebaseConnectivity();
+      if (result.ok) {
+        setConnectStatus({
+          type: 'success',
+          message: `✅ Kết nối Firebase thành công! Bản ghi mới nhất trên Firebase: Ngày ${result.latestDate || '---'}`
+        });
+      } else {
+        setConnectStatus({
+          type: 'error',
+          message: `❌ Lỗi kết nối Firebase: ${result.error}. Vui lòng kiểm tra lại URL hoặc kết nối mạng.`
+        });
+      }
+    } catch (err) {
+      setConnectStatus({ type: 'error', message: `❌ Lỗi: ${err.message}` });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const audit = meta?.audit || {};
@@ -21,13 +47,26 @@ export default function SettingsSyncView({ meta, onRefresh, isRefreshing }) {
       <div className="glass-card rounded-2xl p-6 border border-slate-800 bg-gradient-to-r from-slate-900 to-slate-950 space-y-1">
         <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
           <Settings className="w-4 h-4" />
-          Cấu Hình Kết Nối & Đồng Bộ Firebase Realtime Database
+          Cấu Hình Kết Nối & Tự Động Cập Nhật Dữ Liệu Hàng Ngày
         </div>
         <h2 className="text-xl sm:text-2xl font-black text-white">
           Thiết Lập Database & Kiểm Tra Toàn Vẹn
         </h2>
         <p className="text-xs text-slate-400">
-          Quản lý kết nối trực tiếp đến Firebase, kiểm tra dữ liệu trùng lặp, thiếu ngày và trạng thái đồng bộ.
+          Ứng dụng tự động kiểm tra và cập nhật dữ liệu mới sau mỗi kỳ quay thưởng (18h30 hàng ngày), giữ nguyên toàn bộ lịch sử từ 2010 đến nay.
+        </p>
+      </div>
+
+      {/* Auto-Update Feature Card */}
+      <div className="glass-card rounded-2xl p-5 border border-emerald-500/30 bg-emerald-500/5 space-y-3">
+        <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+          <Clock className="w-4 h-4" />
+          <span>Cơ Chế Tự Động Cập Nhật Từng Ngày (Auto Incremental Sync)</span>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          • <strong>Tự động kiểm tra:</strong> Ứng dụng tự động thăm dò Firebase định kỳ và kiểm tra sau khung giờ <strong>18:30</strong> mỗi ngày.<br />
+          • <strong>Tải nạp thông minh (Incremental):</strong> Khi có ngày quay mới, hệ thống chỉ tải các ngày còn thiếu và tự động ghép vào dữ liệu 10 năm hiện có.<br />
+          • <strong>Bảo toàn dàn số:</strong> Mọi dàn số bạn đã nhập, chỉnh sửa hoặc gộp đều được lưu trữ an toàn, không bị mất khi cập nhật kết quả mới.
         </p>
       </div>
 
@@ -38,11 +77,21 @@ export default function SettingsSyncView({ meta, onRefresh, isRefreshing }) {
           Trạng Thái Đồng Bộ Hiện Tại
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+            <span className="text-slate-400 block mb-1">Kỳ Quay Mới Nhất:</span>
+            <span className="text-amber-400 font-bold text-sm">
+              {latestDate || audit.endDate || '---'}
+            </span>
+          </div>
+
           <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
             <span className="text-slate-400 block mb-1">Nguồn Dữ Liệu:</span>
             <span className="text-white font-bold text-sm">
-              {meta?.source === 'firebase_online' ? '🟢 Trực tiếp Firebase Realtime DB' : '🟡 Bộ Nhớ Cache / Hạt Nhân Local Seed (2010)'}
+              {meta?.source === 'firebase_incremental' ? '🟢 Tự động cập nhật (Incremental)' :
+               meta?.source === 'firebase_online' ? '🟢 Trực tiếp Firebase Realtime DB' :
+               meta?.source === 'cache_pending_today' ? '🟡 Chờ kết quả ngày mới...' :
+               '🟡 Bộ Nhớ Cache / Hạt Nhân 2010'}
             </span>
           </div>
 
@@ -54,7 +103,8 @@ export default function SettingsSyncView({ meta, onRefresh, isRefreshing }) {
           </div>
         </div>
 
-        <div className="pt-2">
+        {/* Buttons Action Bar */}
+        <div className="flex flex-wrap items-center gap-3 pt-2">
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
@@ -63,7 +113,44 @@ export default function SettingsSyncView({ meta, onRefresh, isRefreshing }) {
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Đang kết nối & đồng bộ Firebase...' : 'Đồng Bộ Lại Dữ Liệu Ngay'}
           </button>
+
+          <button
+            onClick={handleTestConnect}
+            disabled={isTesting}
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 transition-all border border-slate-700 disabled:opacity-50"
+          >
+            <Activity className={`w-4 h-4 text-cyan-400 ${isTesting ? 'animate-pulse' : ''}`} />
+            {isTesting ? 'Đang kiểm tra...' : 'Kiểm Tra Kết Nối Firebase'}
+          </button>
+
+          {onHardReset && (
+            <button
+              onClick={() => {
+                if (window.confirm('Bạn có chắc chắn muốn xóa cache và tải lại toàn bộ dữ liệu từ năm 2010 từ Firebase không?')) {
+                  onHardReset();
+                }
+              }}
+              disabled={isRefreshing}
+              className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs flex items-center gap-2 transition-all border border-rose-500/30 ml-auto disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4 text-rose-400" />
+              Xóa Cache & Tải Lại Toàn Bộ
+            </button>
+          )}
         </div>
+
+        {/* Test Connection Result Notice */}
+        {connectStatus && (
+          <div className={`p-3.5 rounded-xl text-xs font-bold border transition-all ${
+            connectStatus.type === 'success'
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+              : connectStatus.type === 'error'
+              ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+              : 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+          }`}>
+            {connectStatus.message}
+          </div>
+        )}
       </div>
 
       {/* Database URL Config */}

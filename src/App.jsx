@@ -10,7 +10,7 @@ import BacktestView from './components/BacktestView';
 import HistoryResultView from './components/HistoryResultView';
 import SettingsSyncView from './components/SettingsSyncView';
 
-import { loadLotteryData } from './services/dataService';
+import { loadLotteryData, clearDataCache } from './services/dataService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('danso_db_tail');
@@ -19,6 +19,14 @@ export default function App() {
   const [syncMeta, setSyncMeta] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [autoSyncStatus, setAutoSyncStatus] = useState(null); // { type, message }
+
+  // Helper: get today in Vietnam (UTC+7)
+  const getTodayVN = () => {
+    const now = new Date();
+    const utc7 = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    return utc7.toISOString().slice(0, 10);
+  };
 
   // Initial load
   useEffect(() => {
@@ -37,19 +45,89 @@ export default function App() {
     init();
   }, []);
 
-  // Handle refresh
+  // Auto-refresh: check every 30 minutes if today's draw is missing
+  useEffect(() => {
+    const AUTO_REFRESH_INTERVAL = 30 * 60 * 1000; // 30 phút
+
+    const autoCheck = async () => {
+      const today = getTodayVN();
+      // If the latest record is already today, skip
+      if (historyData[0]?.d === today) return;
+
+      // Only check after 18:30 Vietnam time (draws typically finish by 18:30)
+      const nowVN = new Date(Date.now() + 7 * 60 * 60 * 1000);
+      const hour = nowVN.getUTCHours();
+      const minute = nowVN.getUTCMinutes();
+      if (hour < 18 || (hour === 18 && minute < 30)) return;
+
+      try {
+        setAutoSyncStatus({ type: 'info', message: 'Đang kiểm tra kết quả mới từ Firebase...' });
+        const { records, meta } = await loadLotteryData(false);
+        if (records.length > 0 && records[0]?.d !== historyData[0]?.d) {
+          setHistoryData(records);
+          setSyncMeta(meta);
+          setAutoSyncStatus({
+            type: 'success',
+            message: `✅ Đã cập nhật dữ liệu ngày ${records[0]?.d} tự động!`
+          });
+          setTimeout(() => setAutoSyncStatus(null), 5000);
+        } else {
+          setAutoSyncStatus(null);
+        }
+      } catch (err) {
+        setAutoSyncStatus(null);
+      }
+    };
+
+    // Run once immediately on mount (after 3s delay to avoid blocking initial render)
+    const initialTimer = setTimeout(autoCheck, 3000);
+    // Then run every 30 minutes
+    const interval = setInterval(autoCheck, AUTO_REFRESH_INTERVAL);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [historyData]);
+
+  // Handle manual refresh (force full sync from Firebase)
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    setAutoSyncStatus({ type: 'info', message: 'Đang kết nối Firebase và đồng bộ dữ liệu...' });
     try {
       const { records, meta } = await loadLotteryData(true);
       if (records && records.length > 0) {
         setHistoryData(records);
         setSyncMeta(meta);
+        setAutoSyncStatus({
+          type: 'success',
+          message: `✅ Đồng bộ thành công! Dữ liệu mới nhất: ${records[0]?.d} (${records.length.toLocaleString()} kỳ).`
+        });
+        setTimeout(() => setAutoSyncStatus(null), 5000);
       }
     } catch (err) {
       console.error('Sync error:', err);
+      setAutoSyncStatus({ type: 'error', message: `Lỗi đồng bộ: ${err.message}` });
+      setTimeout(() => setAutoSyncStatus(null), 5000);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  // Handle clear cache + hard reload
+  const handleHardReset = async () => {
+    clearDataCache();
+    setHistoryData([]);
+    setSyncMeta(null);
+    setIsLoading(true);
+    try {
+      const { records, meta } = await loadLotteryData(true);
+      setHistoryData(records);
+      setSyncMeta(meta);
+    } catch (err) {
+      console.error('Hard reset failed:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -71,7 +149,10 @@ export default function App() {
         setMode={setMode}
         meta={syncMeta}
         onRefresh={handleRefresh}
+        onHardReset={handleHardReset}
         isRefreshing={isRefreshing}
+        autoSyncStatus={autoSyncStatus}
+        latestDate={historyData[0]?.d || ''}
       />
 
       {/* Main Content Area */}
@@ -171,7 +252,9 @@ export default function App() {
               <SettingsSyncView
                 meta={syncMeta}
                 onRefresh={handleRefresh}
+                onHardReset={handleHardReset}
                 isRefreshing={isRefreshing}
+                latestDate={historyData[0]?.d || ''}
               />
             )}
 

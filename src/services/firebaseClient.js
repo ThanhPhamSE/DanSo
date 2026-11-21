@@ -29,21 +29,44 @@ export function setDatabaseUrl(url) {
 
 /**
  * Fetch a node directly from Firebase Realtime Database
- * Supports filtering from 2010 via orderBy and startAt
+ * Supports filtering from a specific date via orderBy and startAt
  */
 export async function fetchFromFirebase(nodeName, startAtDate = '2010-01-01') {
   const baseUrl = getDatabaseUrl();
   const url = `${baseUrl}/${nodeName}.json?orderBy="$key"&startAt="${startAtDate}"`;
 
+  const res = await fetch(url, { cache: 'no-cache' });
+  if (!res.ok) {
+    throw new Error(`Firebase HTTP ${res.status}: ${res.statusText} for node: ${nodeName}`);
+  }
+  const data = await res.json();
+  return data || {};
+}
+
+/**
+ * Fetch only new records from a specific start date (for incremental update)
+ */
+export async function fetchIncrementalFromFirebase(nodeName, startAtDate) {
+  return fetchFromFirebase(nodeName, startAtDate);
+}
+
+/**
+ * Quick connectivity check - fetches only the latest 1 record to test connection
+ */
+export async function checkFirebaseConnectivity() {
   try {
+    const baseUrl = getDatabaseUrl();
+    // Fetch just the last item by ordering descending with limitToLast=1
+    const url = `${baseUrl}/lottery_results.json?orderBy="$key"&limitToLast=1`;
     const res = await fetch(url, { cache: 'no-cache' });
-    if (!res.ok) {
-      throw new Error(`Firebase HTTP ${res.status}: ${res.statusText}`);
-    }
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const data = await res.json();
-    return data || {};
+    if (data) {
+      const latestDate = Object.keys(data)[0] || '';
+      return { ok: true, latestDate };
+    }
+    return { ok: false, error: 'No data returned' };
   } catch (err) {
-    console.warn(`[FirebaseClient] Direct connection failed for ${nodeName}:`, err.message);
-    throw err;
+    return { ok: false, error: err.message };
   }
 }
