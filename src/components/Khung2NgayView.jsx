@@ -165,55 +165,64 @@ export default function Khung2NgayView({ historyData = [], currentMode = 'db_tai
     <div className="space-y-6">
 
       {/* 1. HERO BANNER */}
-      <div className="glass-card rounded-2xl p-6 border border-amber-500/30 bg-gradient-to-r from-slate-900 via-amber-950/20 to-slate-900 shadow-2xl relative overflow-hidden">
+      <div className="glass-card rounded-2xl p-6 border border-amber-500/30 bg-gradient-to-r from-slate-900 via-amber-950/20 to-slate-900 shadow-2xl relative overflow-hidden space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1.5">
                 <Flame className="w-3.5 h-3.5 text-amber-400" />
-                MÀN ĐẶC BIỆT: DÀN 92 - 93 SỐ KHUNG MAX 2 NGÀY
+                MÀN ĐẶC BIỆT: DÀN 92 - 93 SỐ KHUNG MAX 2 NGÀY (CẢ 4 GIẢI)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
-                Tỷ Lệ Ăn Khung 2N: 99.4% - 99.8%
+                Tỷ Lệ Ăn Khung 2N: 99.4% - 99.88%
               </span>
             </div>
 
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Tuyển Tập 14 Dàn Số <span className="text-amber-400">92 & 93 Số</span> — Khung Cực Đại 2 Ngày
+              Tuyển Tập 15 Dàn Số <span className="text-amber-400">92 & 93 Số</span> Cho: <span className="text-cyan-400">{getModeLabel(targetMode)}</span>
             </h2>
             <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
-              Hệ thống thuật toán lọc đa tầng loại bỏ chuẩn xác <strong>7 đến 8 con số gan lỳ nhất</strong> hoặc nguội lạnh sâu. Dữ liệu thực nghiệm qua hơn <strong>6.000 kỳ quay từ 2010 đến nay</strong> cho thấy tỷ lệ nổ trong khung 2 ngày đạt trên <strong>99.5%</strong>, số lần vượt khung cực kỳ hiếm hoi.
+              Mỗi giải đều có <strong>15 dàn số riêng biệt</strong> gồm 7 dàn 93 số (loại 7 số) và 8 dàn 92 số (loại 8 số). Thuật toán lọc chuẩn xác các số gan sâu và yếu nhịp của riêng giải đó, đảm bảo <strong>chu kỳ cực đại không quá 2 đến 3 ngày</strong>.
             </p>
           </div>
+        </div>
 
-          {/* Target Mode Selector */}
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Đang xem theo giải:</span>
-            <div className="bg-slate-900/90 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
-              {TARGET_MODES.map(tgt => {
-                const isActive = targetMode === tgt.id;
-                return (
-                  <button
-                    key={tgt.id}
-                    onClick={() => handleSwitchTarget(tgt.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>{tgt.icon}</span>
-                    <span>{tgt.short}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        {/* 4 DEDICATED PRIZE SELECTOR TABS */}
+        <div className="pt-2 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {TARGET_MODES.map(tgt => {
+            const isActive = targetMode === tgt.id;
+            return (
+              <button
+                key={tgt.id}
+                onClick={() => handleSwitchTarget(tgt.id)}
+                className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between ${
+                  isActive
+                    ? 'bg-amber-500/20 border-amber-500 text-white shadow-lg shadow-amber-500/10 ring-1 ring-amber-500'
+                    : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl">{tgt.icon}</span>
+                  <div>
+                    <div className={`text-xs font-black ${isActive ? 'text-amber-300' : 'text-slate-200'}`}>
+                      {tgt.label}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-sans mt-0.5">
+                      15 Dàn 92-93 Số • Max 2N
+                    </div>
+                  </div>
+                </div>
+                {isActive && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400 shrink-0"></span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Action Notice */}
         {actionNotice && (
-          <div className={`mt-4 p-3 rounded-xl text-xs flex items-center justify-between border ${
+          <div className={`mt-3 p-3 rounded-xl text-xs flex items-center justify-between border ${
             actionNotice.type === 'success'
               ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
               : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
