@@ -3,12 +3,14 @@
  * Uses native standard fetch for high performance, zero-dependency, and direct browser connectivity.
  */
 
-const DEFAULT_FIREBASE_RTDB_URL = 'https://appdanso-default-rtdb-default-rtdb.firebaseio.com';
+const DEFAULT_FIREBASE_RTDB_URL = 'https://appdanso-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 export function getDatabaseUrl() {
   try {
     const custom = localStorage.getItem('lottery_firebase_rtdb_url');
-    if (custom && custom.trim()) return custom.trim().replace(/\/+$/, '');
+    if (custom && custom.trim() && !custom.includes('-default-rtdb-default-rtdb')) {
+      return custom.trim().replace(/\/+$/, '');
+    }
   } catch (e) {
     console.warn('LocalStorage access error:', e);
   }

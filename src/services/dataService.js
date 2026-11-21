@@ -12,8 +12,8 @@
 import { fetchFromFirebase, fetchIncrementalFromFirebase, getDatabaseUrl } from './firebaseClient';
 import { normalizeLotteryData, TET_FAKE_DUPLICATE_DATES } from './dataNormalizer';
 
-const CACHE_KEY = 'lottery_data_cache_v2010';
-const SYNC_META_KEY = 'lottery_sync_meta_v2010';
+const CACHE_KEY = 'lottery_data_cache_v2026_11_20';
+const SYNC_META_KEY = 'lottery_sync_meta_v2026_11_20';
 
 // Cache expires after 2 hours (in ms)
 const CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
