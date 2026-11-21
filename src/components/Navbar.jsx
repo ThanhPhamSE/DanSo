@@ -14,13 +14,14 @@ export default function Navbar({
   autoSyncStatus,
   latestDate
 }) {
-  // 4 Dedicated Dàn Số Screens + Màn Dàn 92-93 Số Khung 2 Ngày
+  // 4 Dedicated Dàn Số Screens + Màn Dàn 92-93 Số Khung 2N + Màn 3 Càng ĐB & G1
   const dansoTabs = [
     { id: 'danso_db_tail', targetMode: 'db_tail', label: 'Dàn Đuôi ĐB (Đề)', icon: '🎯', highlight: true },
     { id: 'danso_db_head', targetMode: 'db_head', label: 'Dàn Đầu ĐB', icon: '👑', highlight: true },
     { id: 'danso_g1_tail', targetMode: 'g1_tail', label: 'Dàn Đuôi G1', icon: '🥇', highlight: true },
     { id: 'danso_g1_head', targetMode: 'g1_head', label: 'Dàn Đầu G1', icon: '⭐', highlight: true },
-    { id: 'danso_khung2ngay', targetMode: mode || 'db_tail', label: 'Dàn 92-93 Số (Khung 2N)', icon: '🔥', highlight: true, special: true }
+    { id: 'danso_khung2ngay', targetMode: mode || 'db_tail', label: 'Dàn 92-93 Số (Khung 2N)', icon: '🔥', highlight: true },
+    { id: 'bacang', targetMode: 'db_tail', label: 'Xác Suất 3 Càng (ĐB & G1)', icon: '🔮', highlight: true, special: true }
   ];
 
   const generalTabs = [

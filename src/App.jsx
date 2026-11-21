@@ -7,6 +7,7 @@ import GanView from './components/GanView';
 import CycleView from './components/CycleView';
 import DanSoDedicatedView from './components/DanSoDedicatedView';
 import Khung2NgayView from './components/Khung2NgayView';
+import BaCangAnalyticsView from './components/BaCangAnalyticsView';
 import BacktestView from './components/BacktestView';
 import HistoryResultView from './components/HistoryResultView';
 import SettingsSyncView from './components/SettingsSyncView';
@@ -183,6 +184,13 @@ export default function App() {
                 historyData={historyData}
                 currentMode={mode}
                 setMode={setMode}
+              />
+            )}
+
+            {/* ===================== MÀN XÁC SUẤT 3 CÀNG (ĐB & G1) ===================== */}
+            {activeTab === 'bacang' && (
+              <BaCangAnalyticsView
+                historyData={historyData}
               />
             )}
 
