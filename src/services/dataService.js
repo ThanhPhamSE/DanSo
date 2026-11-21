@@ -285,6 +285,54 @@ export async function loadLotteryData(forceOnline = false) {
   return { records: [], meta: null };
 }
 
+/**
+ * Check if Firebase has a newer draw date than our current local records.
+ * If yes, automatically fetch and merge the new records incrementally.
+ * Returns { hasNew: true, records, meta, newDate } or { hasNew: false }
+ */
+export async function checkAndSyncNewDraws(currentLatestDate) {
+  try {
+    const baseUrl = getDatabaseUrl();
+    // Tiny lightweight query: fetch only the 1 latest key from Firebase
+    const url = `${baseUrl}/lottery_results.json?orderBy="$key"&limitToLast=1`;
+    const res = await fetch(url, { cache: 'no-cache' });
+    if (!res.ok) return { hasNew: false };
+    
+    const data = await res.json();
+    if (!data || typeof data !== 'object') return { hasNew: false };
+
+    const firebaseLatestDate = Object.keys(data)[0];
+    if (!firebaseLatestDate) return { hasNew: false };
+
+    // If Firebase has a newer date than current in-memory / cache
+    if (!currentLatestDate || firebaseLatestDate > currentLatestDate) {
+      console.log(`[DataService] 🔥 Found newer draw on Firebase: ${firebaseLatestDate} > ${currentLatestDate}. Syncing...`);
+      const { data: cachedData } = readCache();
+      const baseRecords = (cachedData && cachedData.length > 0) ? cachedData : [];
+      
+      const merged = await incrementalUpdate(baseRecords, currentLatestDate || '2010-01-01');
+      if (merged && merged.length > 0) {
+        const meta = {
+          source: 'firebase_incremental',
+          lastSync: new Date().toISOString(),
+          databaseUrl: getDatabaseUrl(),
+          audit: {
+            totalRecords: merged.length,
+            startDate: merged[merged.length - 1]?.d || '2010-01-01',
+            endDate: merged[0]?.d || firebaseLatestDate
+          }
+        };
+        writeCache(merged, meta);
+        return { hasNew: true, records: merged, meta, newDate: merged[0]?.d };
+      }
+    }
+    return { hasNew: false };
+  } catch (err) {
+    console.warn('[DataService] Background check failed:', err.message);
+    return { hasNew: false, error: err.message };
+  }
+}
+
 export function getSyncMetadata() {
   try {
     const raw = localStorage.getItem(SYNC_META_KEY);

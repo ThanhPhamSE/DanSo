@@ -10,7 +10,7 @@ import BacktestView from './components/BacktestView';
 import HistoryResultView from './components/HistoryResultView';
 import SettingsSyncView from './components/SettingsSyncView';
 
-import { loadLotteryData, clearDataCache } from './services/dataService';
+import { loadLotteryData, clearDataCache, checkAndSyncNewDraws } from './services/dataService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('danso_db_tail');
@@ -45,50 +45,39 @@ export default function App() {
     init();
   }, []);
 
-  // Auto-refresh: check every 30 minutes if today's draw is missing
+  // Auto-refresh: lightweight check every 60 seconds directly against Firebase Realtime DB
   useEffect(() => {
-    const AUTO_REFRESH_INTERVAL = 30 * 60 * 1000; // 30 phút
+    if (isLoading || historyData.length === 0) return;
 
-    const autoCheck = async () => {
-      const today = getTodayVN();
-      // If the latest record is already today, skip
-      if (historyData[0]?.d === today) return;
+    const currentLatest = historyData[0]?.d;
 
-      // Only check after 18:30 Vietnam time (draws typically finish by 18:30)
-      const nowVN = new Date(Date.now() + 7 * 60 * 60 * 1000);
-      const hour = nowVN.getUTCHours();
-      const minute = nowVN.getUTCMinutes();
-      if (hour < 18 || (hour === 18 && minute < 30)) return;
-
+    const runAutoCheck = async () => {
       try {
-        setAutoSyncStatus({ type: 'info', message: 'Đang kiểm tra kết quả mới từ Firebase...' });
-        const { records, meta } = await loadLotteryData(false);
-        if (records.length > 0 && records[0]?.d !== historyData[0]?.d) {
-          setHistoryData(records);
-          setSyncMeta(meta);
+        const res = await checkAndSyncNewDraws(currentLatest);
+        if (res.hasNew && res.records && res.records.length > 0) {
+          setHistoryData(res.records);
+          setSyncMeta(res.meta);
           setAutoSyncStatus({
             type: 'success',
-            message: `✅ Đã cập nhật dữ liệu ngày ${records[0]?.d} tự động!`
+            message: `🎉 Tự động cập nhật kỳ quay mới ngày ${res.newDate}! (Tổng ${res.records.length.toLocaleString()} kỳ)`
           });
-          setTimeout(() => setAutoSyncStatus(null), 5000);
-        } else {
-          setAutoSyncStatus(null);
+          setTimeout(() => setAutoSyncStatus(null), 6000);
         }
       } catch (err) {
-        setAutoSyncStatus(null);
+        console.warn('Auto check error:', err);
       }
     };
 
-    // Run once immediately on mount (after 3s delay to avoid blocking initial render)
-    const initialTimer = setTimeout(autoCheck, 3000);
-    // Then run every 30 minutes
-    const interval = setInterval(autoCheck, AUTO_REFRESH_INTERVAL);
+    // Run first check 2 seconds after load
+    const initialTimer = setTimeout(runAutoCheck, 2000);
+    // Poll every 60 seconds for 24/7 realtime updates
+    const interval = setInterval(runAutoCheck, 60 * 1000);
 
     return () => {
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, [historyData]);
+  }, [historyData, isLoading]);
 
   // Handle manual refresh (force full sync from Firebase)
   const handleRefresh = async () => {
