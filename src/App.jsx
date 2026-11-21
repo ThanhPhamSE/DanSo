@@ -12,7 +12,7 @@ import BacktestView from './components/BacktestView';
 import HistoryResultView from './components/HistoryResultView';
 import SettingsSyncView from './components/SettingsSyncView';
 
-import { loadLotteryData, clearDataCache, checkAndSyncNewDraws } from './services/dataService';
+import { loadLotteryData, clearDataCache, checkAndSyncNewDraws, addOrUpdateManualRecord } from './services/dataService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('danso_db_tail');
@@ -119,6 +119,19 @@ export default function App() {
       console.error('Hard reset failed:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleManualAddRecord = (record) => {
+    const res = addOrUpdateManualRecord(record);
+    if (res && res.records) {
+      setHistoryData(res.records);
+      setSyncMeta(res.meta);
+      setAutoSyncStatus({
+        type: 'success',
+        message: `✅ Đã bổ sung thành công kết quả ngày ${record.d}! (ĐB: ${record.sp}, G1: ${record.fp})`
+      });
+      setTimeout(() => setAutoSyncStatus(null), 6000);
     }
   };
 
@@ -260,6 +273,7 @@ export default function App() {
                 meta={syncMeta}
                 onRefresh={handleRefresh}
                 onHardReset={handleHardReset}
+                onManualAdd={handleManualAddRecord}
                 isRefreshing={isRefreshing}
                 latestDate={historyData[0]?.d || ''}
               />

@@ -1,13 +1,61 @@
 import React, { useState } from 'react';
-import { Settings, RefreshCw, Database, ShieldCheck, CheckCircle2, AlertTriangle, ExternalLink, Save, Trash2, Info, Activity, Clock } from 'lucide-react';
+import { Settings, RefreshCw, Database, ShieldCheck, CheckCircle2, AlertTriangle, ExternalLink, Save, Trash2, Info, Activity, Clock, PlusCircle, Calendar } from 'lucide-react';
 import { getDatabaseUrl, setDatabaseUrl, checkFirebaseConnectivity } from '../services/firebaseClient';
 import { clearDataCache } from '../services/dataService';
 
-export default function SettingsSyncView({ meta, onRefresh, onHardReset, isRefreshing, latestDate }) {
+export default function SettingsSyncView({ meta, onRefresh, onHardReset, onManualAdd, isRefreshing, latestDate }) {
   const [dbUrl, setDbUrl] = useState(getDatabaseUrl());
   const [saveStatus, setSaveStatus] = useState('');
   const [connectStatus, setConnectStatus] = useState(null);
   const [isTesting, setIsTesting] = useState(false);
+
+  // Manual Draw Entry Form
+  const getTodayISO = () => {
+    const d = new Date();
+    const utc7 = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+    return utc7.toISOString().slice(0, 10);
+  };
+
+  const [manualDate, setManualDate] = useState(getTodayISO());
+  const [manualSp, setManualSp] = useState('');
+  const [manualFp, setManualFp] = useState('');
+  const [manualMsg, setManualMsg] = useState(null);
+
+  const handleManualSubmit = (e) => {
+    e.preventDefault();
+    if (!manualDate) {
+      setManualMsg({ type: 'error', text: 'Vui lòng chọn ngày quay!' });
+      return;
+    }
+    const cleanSp = manualSp.trim();
+    const cleanFp = manualFp.trim();
+
+    if (!/^\d{5}$/.test(cleanSp)) {
+      setManualMsg({ type: 'error', text: 'Giải Đặc Biệt phải đúng 5 chữ số (ví dụ: 06804 hoặc 15178)!' });
+      return;
+    }
+    if (!/^\d{5}$/.test(cleanFp)) {
+      setManualMsg({ type: 'error', text: 'Giải Nhất phải đúng 5 chữ số (ví dụ: 37886 hoặc 12262)!' });
+      return;
+    }
+
+    if (onManualAdd) {
+      onManualAdd({
+        d: manualDate,
+        sp: cleanSp,
+        fp: cleanFp,
+        db: cleanSp.slice(-2),
+        g1: cleanFp.slice(-2)
+      });
+      setManualMsg({
+        type: 'success',
+        text: `Đã bổ sung thành công ngày ${manualDate}: ĐB=${cleanSp} (Đề: ${cleanSp.slice(-2)}), G1=${cleanFp} (Đề G1: ${cleanFp.slice(-2)})!`
+      });
+      setManualSp('');
+      setManualFp('');
+      setTimeout(() => setManualMsg(null), 7000);
+    }
+  };
 
   const handleSaveUrl = (e) => {
     e.preventDefault();
@@ -152,6 +200,95 @@ export default function SettingsSyncView({ meta, onRefresh, onHardReset, isRefre
           </div>
         )}
       </div>
+
+      {/* Manual Draw Entry Card (Quick add missing or today's draw) */}
+      <form onSubmit={handleManualSubmit} className="glass-card rounded-2xl p-6 border border-amber-500/30 bg-amber-500/5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-amber-400 flex items-center gap-2">
+            <PlusCircle className="w-4 h-4 text-amber-400" />
+            Bổ Sung / Nhập Thủ Công Kỳ Quay Ngày Mới (Nếu Firebase Chưa Kịp Có)
+          </h3>
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300">
+            Cập nhật tức thì
+          </span>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Nếu kỳ quay hôm nay hoặc ngày nào đó chưa kịp đồng bộ từ máy chủ, bạn chỉ cần nhập <strong>Giải Đặc Biệt (5 số)</strong> và <strong>Giải Nhất (5 số)</strong>. Toàn bộ 4 màn Dàn Số, Khung 2 Ngày và 3 Càng sẽ tự động bóc tách và cập nhật ngay lập tức!
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-slate-300 font-bold block mb-1">
+              1. Ngày Quay (YYYY-MM-DD):
+            </label>
+            <input
+              type="date"
+              value={manualDate}
+              onChange={(e) => setManualDate(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-300 font-bold block mb-1">
+              2. Giải Đặc Biệt (Đủ 5 số):
+            </label>
+            <input
+              type="text"
+              maxLength={5}
+              placeholder="VD: 06804 hoặc 15178"
+              value={manualSp}
+              onChange={(e) => setManualSp(e.target.value.replace(/\D/g, ''))}
+              className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-xl p-2.5 text-xs text-amber-300 font-mono tracking-wider font-bold focus:outline-none placeholder:text-slate-600"
+              required
+            />
+            {manualSp.length === 5 && (
+              <span className="text-[10px] text-emerald-400 mt-1 block font-mono">
+                → Đề ĐB: {manualSp.slice(-2)} | Đầu ĐB: {manualSp.slice(0, 2)} | 3 Càng: {manualSp.slice(-3)}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-300 font-bold block mb-1">
+              3. Giải Nhất (Đủ 5 số):
+            </label>
+            <input
+              type="text"
+              maxLength={5}
+              placeholder="VD: 37886 hoặc 12262"
+              value={manualFp}
+              onChange={(e) => setManualFp(e.target.value.replace(/\D/g, ''))}
+              className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-xl p-2.5 text-xs text-cyan-300 font-mono tracking-wider font-bold focus:outline-none placeholder:text-slate-600"
+              required
+            />
+            {manualFp.length === 5 && (
+              <span className="text-[10px] text-emerald-400 mt-1 block font-mono">
+                → Đề G1: {manualFp.slice(-2)} | Đầu G1: {manualFp.slice(0, 2)} | 3 Càng: {manualFp.slice(-3)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {manualMsg && (
+          <div className={`p-3 rounded-xl text-xs font-bold border ${
+            manualMsg.type === 'success'
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+              : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+          }`}>
+            {manualMsg.text}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-2 transition-all shadow-md shadow-amber-500/20"
+        >
+          <Save className="w-4 h-4" />
+          Lưu & Bổ Sung Kỳ Quay Này Vào Hệ Thống
+        </button>
+      </form>
 
       {/* Database URL Config */}
       <form onSubmit={handleSaveUrl} className="glass-card rounded-2xl p-6 border border-slate-800 space-y-4">

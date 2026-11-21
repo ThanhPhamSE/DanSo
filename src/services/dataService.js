@@ -12,8 +12,8 @@
 import { fetchFromFirebase, fetchIncrementalFromFirebase, getDatabaseUrl } from './firebaseClient';
 import { normalizeLotteryData, TET_FAKE_DUPLICATE_DATES } from './dataNormalizer';
 
-const CACHE_KEY = 'lottery_data_cache_v2026_11_20';
-const SYNC_META_KEY = 'lottery_sync_meta_v2026_11_20';
+const CACHE_KEY = 'lottery_data_cache_v2026_11_21';
+const SYNC_META_KEY = 'lottery_sync_meta_v2026_11_21';
 
 // Cache expires after 2 hours (in ms)
 const CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
@@ -340,6 +340,33 @@ export function getSyncMetadata() {
   } catch (e) {
     return null;
   }
+}
+
+/**
+ * Manually add or update a draw result (e.g. today or missing date)
+ * Immediately updates localStorage cache and returns updated records
+ */
+export function addOrUpdateManualRecord(newRec) {
+  const { data: cachedData, meta: cachedMeta } = readCache();
+  const records = cachedData || [];
+
+  // Remove existing record on same date if any
+  const filtered = records.filter(r => r.d !== newRec.d);
+  const updated = [newRec, ...filtered].sort((a, b) => b.d.localeCompare(a.d));
+
+  const updatedMeta = {
+    ...cachedMeta,
+    source: 'manual_override',
+    lastSync: new Date().toISOString(),
+    audit: {
+      ...cachedMeta?.audit,
+      totalRecords: updated.length,
+      endDate: updated[0]?.d
+    }
+  };
+
+  writeCache(updated, updatedMeta);
+  return { records: updated, meta: updatedMeta };
 }
 
 /** Clear all cache (force full reload next time) */
